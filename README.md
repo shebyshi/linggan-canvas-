@@ -8,6 +8,10 @@
 
 也可以部署到 GitHub Pages、Vercel、Netlify 或 Cloudflare Pages，作为在线小软件使用。
 
+## 下载压缩包
+
+[下载 linggan-canvas.zip](https://github.com/shebyshi/linggan-canvas-/raw/main/linggan-canvas.zip)
+
 ## 功能
 
 - 任务、备注、图片、视频节点
