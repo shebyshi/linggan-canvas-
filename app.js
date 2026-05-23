@@ -395,6 +395,16 @@ function addImageFile(file, point) {
   reader.readAsDataURL(file);
 }
 
+function addTextNote(content, point) {
+  const value = String(content || "").trim();
+  if (!value) return;
+  createNodeAt("note", point, {
+    color: "amber",
+    title: text.note,
+    text: value,
+  });
+}
+
 function addVideoFile(file, point) {
   if (!file || !file.type.startsWith("video/")) return;
 
@@ -1629,6 +1639,38 @@ viewport.addEventListener("drop", (event) => {
     if (file.type.startsWith("video/")) addVideoFile(file, point);
     else addImageFile(file, point);
   });
+});
+
+window.addEventListener("paste", (event) => {
+  if (isTextEditingElement(document.activeElement)) return;
+  const items = Array.from(event.clipboardData?.items || []);
+  const imageItems = items.filter((item) => item.type.startsWith("image/"));
+  const textValue = event.clipboardData?.getData("text/plain");
+  const center = screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
+
+  if (imageItems.length) {
+    event.preventDefault();
+    imageItems.forEach((item, index) => {
+      const file = item.getAsFile();
+      if (!file) return;
+      const point = {
+        x: center.x + index * 28,
+        y: center.y + index * 28,
+      };
+      const namedFile = new File(
+        [file],
+        file.name || `clipboard-image-${Date.now()}-${index + 1}.png`,
+        { type: file.type || "image/png" },
+      );
+      addImageFile(namedFile, point);
+    });
+    return;
+  }
+
+  if (textValue?.trim()) {
+    event.preventDefault();
+    addTextNote(textValue, center);
+  }
 });
 
 window.addEventListener("keydown", (event) => {
