@@ -153,7 +153,7 @@
     <div id="aiModal" class="modal-backdrop" hidden>
       <section class="modal">
         <div class="modal-header">
-          <h2>AI 接口设置</h2>
+          <h2>AI 接口设置（可选）</h2>
           <button id="closeAiModal" class="icon-button" type="button" aria-label="关闭">&times;</button>
         </div>
         <label class="field">
@@ -172,13 +172,14 @@
           <span>生成指令</span>
           <textarea id="aiPrompt" rows="4" placeholder="根据选中的节点内容，整理成更清晰的执行建议。"></textarea>
         </label>
-        <p class="modal-note">API Key 只保存在当前浏览器本地。公开分享网页时，不要使用别人的密钥。</p>
+        <p class="modal-note">这是可选增强功能。不填写也可以正常使用画布；API Key 只保存在当前浏览器本地。</p>
         <div class="modal-actions">
+          <button id="skipAiSettings" class="topbar-button muted" type="button">暂不使用</button>
           <button id="saveAiSettings" class="topbar-button" type="button">保存设置</button>
           <button id="testAiSettings" class="topbar-button" type="button">测试接口</button>
         </div>
       </section>
     </div>
-    <script src="./app.js?v=api-20260524-1"></script>
+    <script src="./app.js?v=api-optional-20260524-1"></script>
   </body>
 </html>

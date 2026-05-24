@@ -23,6 +23,7 @@ const aiSettingsButton = document.getElementById("aiSettings");
 const aiGenerateButton = document.getElementById("aiGenerate");
 const aiModal = document.getElementById("aiModal");
 const closeAiModalButton = document.getElementById("closeAiModal");
+const skipAiSettingsButton = document.getElementById("skipAiSettings");
 const saveAiSettingsButton = document.getElementById("saveAiSettings");
 const testAiSettingsButton = document.getElementById("testAiSettings");
 const aiApiKeyInput = document.getElementById("aiApiKey");
@@ -514,7 +515,7 @@ async function generateWithAi() {
   const settings = loadAiSettings();
   if (!settings.apiKey) {
     openAiModal();
-    window.alert("请先填写 ChatGPT / OpenAI API Key。");
+    window.alert("AI 接口是可选功能。不填写 API Key 也可以继续使用画布；需要 AI 生成时再填写即可。");
     return;
   }
   const selectedNodes = getSelectedNodesForAi();
@@ -1373,6 +1374,7 @@ document.getElementById("addVideo").addEventListener("click", () => {
 });
 aiSettingsButton.addEventListener("click", openAiModal);
 closeAiModalButton.addEventListener("click", closeAiModal);
+skipAiSettingsButton.addEventListener("click", closeAiModal);
 aiModal.addEventListener("click", (event) => {
   if (event.target === aiModal) closeAiModal();
 });

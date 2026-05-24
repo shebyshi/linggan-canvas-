@@ -318,6 +318,15 @@ input {
   color: var(--text);
 }
 
+.topbar-button.muted {
+  color: var(--muted);
+}
+
+.topbar-button.muted:hover {
+  background: rgb(255 255 255 / 5%);
+  color: var(--text);
+}
+
 .topbar-button svg {
   width: 14px;
   height: 14px;
