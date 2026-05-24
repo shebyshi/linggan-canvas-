@@ -1,5 +1,6 @@
 const STORAGE_KEY = "workflow-canvas-v2";
 const OLD_STORAGE_KEY = "workflow-canvas-v1";
+const AI_SETTINGS_KEY = "workflow-canvas-ai-settings-v1";
 
 const viewport = document.getElementById("viewport");
 const canvas = document.getElementById("canvas");
@@ -18,6 +19,16 @@ const videoInput = document.getElementById("videoInput");
 const jsonInput = document.getElementById("jsonInput");
 const searchInput = document.getElementById("searchInput");
 const contextMenu = document.getElementById("contextMenu");
+const aiSettingsButton = document.getElementById("aiSettings");
+const aiGenerateButton = document.getElementById("aiGenerate");
+const aiModal = document.getElementById("aiModal");
+const closeAiModalButton = document.getElementById("closeAiModal");
+const saveAiSettingsButton = document.getElementById("saveAiSettings");
+const testAiSettingsButton = document.getElementById("testAiSettings");
+const aiApiKeyInput = document.getElementById("aiApiKey");
+const aiModelInput = document.getElementById("aiModel");
+const aiEndpointInput = document.getElementById("aiEndpoint");
+const aiPromptInput = document.getElementById("aiPrompt");
 
 const text = {
   chooseMode: "\u9009\u62e9\u6a21\u5f0f",
@@ -403,6 +414,127 @@ function addTextNote(content, point) {
     title: text.note,
     text: value,
   });
+}
+
+function loadAiSettings() {
+  try {
+    return {
+      endpoint: "https://api.openai.com/v1/responses",
+      model: "gpt-4.1-mini",
+      prompt: "根据选中的节点内容，整理成更清晰的执行建议。",
+      apiKey: "",
+      ...JSON.parse(localStorage.getItem(AI_SETTINGS_KEY) || "{}"),
+    };
+  } catch {
+    return {
+      endpoint: "https://api.openai.com/v1/responses",
+      model: "gpt-4.1-mini",
+      prompt: "根据选中的节点内容，整理成更清晰的执行建议。",
+      apiKey: "",
+    };
+  }
+}
+
+function saveAiSettings() {
+  const settings = {
+    apiKey: aiApiKeyInput.value.trim(),
+    model: aiModelInput.value.trim() || "gpt-4.1-mini",
+    endpoint: aiEndpointInput.value.trim() || "https://api.openai.com/v1/responses",
+    prompt: aiPromptInput.value.trim() || "根据选中的节点内容，整理成更清晰的执行建议。",
+  };
+  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings));
+  return settings;
+}
+
+function fillAiSettingsForm() {
+  const settings = loadAiSettings();
+  aiApiKeyInput.value = settings.apiKey || "";
+  aiModelInput.value = settings.model || "";
+  aiEndpointInput.value = settings.endpoint || "";
+  aiPromptInput.value = settings.prompt || "";
+}
+
+function openAiModal() {
+  fillAiSettingsForm();
+  aiModal.hidden = false;
+}
+
+function closeAiModal() {
+  aiModal.hidden = true;
+}
+
+function getSelectedNodesForAi() {
+  const ids = selectedIds.size ? [...selectedIds] : selectedId ? [selectedId] : [];
+  return ids
+    .map((id) => state.nodes.find((node) => node.id === id))
+    .filter((node) => node && node.type !== "image" && node.type !== "video");
+}
+
+function buildAiInput(settings, selectedNodes) {
+  const source = selectedNodes.length
+    ? selectedNodes
+        .map((node, index) => `节点 ${index + 1}\n标题：${node.title || ""}\n内容：${node.text || ""}`)
+        .join("\n\n")
+    : "当前没有选中可读取文本的节点，请直接给出一个灵感画布使用建议。";
+  return `${settings.prompt}\n\n${source}`;
+}
+
+function readResponseText(data) {
+  if (typeof data.output_text === "string") return data.output_text;
+  const chunks = [];
+  for (const item of data.output || []) {
+    for (const content of item.content || []) {
+      if (typeof content.text === "string") chunks.push(content.text);
+    }
+  }
+  return chunks.join("\n").trim();
+}
+
+async function callAi(settings, input) {
+  const response = await fetch(settings.endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${settings.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: settings.model,
+      input,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data.error?.message || `接口请求失败：${response.status}`;
+    throw new Error(message);
+  }
+  return readResponseText(data) || "接口返回成功，但没有读取到文本内容。";
+}
+
+async function generateWithAi() {
+  const settings = loadAiSettings();
+  if (!settings.apiKey) {
+    openAiModal();
+    window.alert("请先填写 ChatGPT / OpenAI API Key。");
+    return;
+  }
+  const selectedNodes = getSelectedNodesForAi();
+  const center = screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
+  aiGenerateButton.disabled = true;
+  modeText.textContent = "AI 生成中...";
+  try {
+    const result = await callAi(settings, buildAiInput(settings, selectedNodes));
+    createNodeAt("note", center, {
+      color: "blue",
+      title: "AI 生成",
+      text: result,
+    });
+    modeText.textContent = text.chooseMode;
+  } catch (error) {
+    window.alert(error.message || "AI 接口调用失败。");
+    modeText.textContent = text.chooseMode;
+  } finally {
+    aiGenerateButton.disabled = false;
+  }
 }
 
 function addVideoFile(file, point) {
@@ -1239,6 +1371,32 @@ document.getElementById("addVideo").addEventListener("click", () => {
   resetMode();
   videoInput.click();
 });
+aiSettingsButton.addEventListener("click", openAiModal);
+closeAiModalButton.addEventListener("click", closeAiModal);
+aiModal.addEventListener("click", (event) => {
+  if (event.target === aiModal) closeAiModal();
+});
+saveAiSettingsButton.addEventListener("click", () => {
+  saveAiSettings();
+  closeAiModal();
+});
+testAiSettingsButton.addEventListener("click", async () => {
+  const settings = saveAiSettings();
+  if (!settings.apiKey) {
+    window.alert("请先填写 API Key。");
+    return;
+  }
+  testAiSettingsButton.disabled = true;
+  try {
+    const result = await callAi(settings, "请回复：接口连接成功");
+    window.alert(result);
+  } catch (error) {
+    window.alert(error.message || "接口测试失败。");
+  } finally {
+    testAiSettingsButton.disabled = false;
+  }
+});
+aiGenerateButton.addEventListener("click", generateWithAi);
 if (undoActionButton) {
   undoActionButton.addEventListener("click", () => {
     resetMode();

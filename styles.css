@@ -910,6 +910,93 @@ body.space-pan .node.video video {
   padding: 7px 5px 4px;
 }
 
+.modal-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 52%);
+  backdrop-filter: blur(10px);
+}
+
+.modal {
+  width: min(520px, 100%);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 10px;
+  background: #171b20;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 45%);
+  padding: 18px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.icon-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 5%);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border: 1px solid #343b46;
+  border-radius: 8px;
+  background: #101419;
+  color: var(--text);
+  outline: 0;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: rgb(71 199 165 / 60%);
+}
+
+.modal-note {
+  margin: 12px 0 0;
+  color: #8f9aa7;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 .color-swatch {
   width: 20px;
   height: 20px;

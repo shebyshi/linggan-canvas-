@@ -98,6 +98,22 @@
           </button>
         </section>
 
+        <section class="tool-group">
+          <div class="tool-label">AI</div>
+          <button id="aiSettings" class="tool-button">
+            <span class="tool-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3v3"></path><path d="M12 18v3"></path><path d="M3 12h3"></path><path d="M18 12h3"></path><circle cx="12" cy="12" r="4"></circle></svg>
+            </span>
+            <span>AI 设置</span>
+          </button>
+          <button id="aiGenerate" class="tool-button">
+            <span class="tool-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path><path d="M5 6v12"></path></svg>
+            </span>
+            <span>AI 生成</span>
+          </button>
+        </section>
+
         <div class="hint">
           <p>滚轮缩放，拖动画布平移。</p>
           <p>图片和视频可直接从文件夹拖进画布。</p>
@@ -134,6 +150,35 @@
     </main>
 
     <div id="contextMenu" class="context-menu" hidden></div>
-    <script src="./app.js?v=clipboard-20260523-1"></script>
+    <div id="aiModal" class="modal-backdrop" hidden>
+      <section class="modal">
+        <div class="modal-header">
+          <h2>AI 接口设置</h2>
+          <button id="closeAiModal" class="icon-button" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <label class="field">
+          <span>ChatGPT / OpenAI API Key</span>
+          <input id="aiApiKey" type="password" placeholder="sk-..." autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>模型</span>
+          <input id="aiModel" type="text" placeholder="gpt-4.1-mini" />
+        </label>
+        <label class="field">
+          <span>接口地址</span>
+          <input id="aiEndpoint" type="url" placeholder="https://api.openai.com/v1/responses" />
+        </label>
+        <label class="field">
+          <span>生成指令</span>
+          <textarea id="aiPrompt" rows="4" placeholder="根据选中的节点内容，整理成更清晰的执行建议。"></textarea>
+        </label>
+        <p class="modal-note">API Key 只保存在当前浏览器本地。公开分享网页时，不要使用别人的密钥。</p>
+        <div class="modal-actions">
+          <button id="saveAiSettings" class="topbar-button" type="button">保存设置</button>
+          <button id="testAiSettings" class="topbar-button" type="button">测试接口</button>
+        </div>
+      </section>
+    </div>
+    <script src="./app.js?v=api-20260524-1"></script>
   </body>
 </html>
