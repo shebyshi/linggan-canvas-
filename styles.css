@@ -930,6 +930,10 @@ body.space-pan .node.video video {
   backdrop-filter: blur(10px);
 }
 
+.modal-backdrop[hidden] {
+  display: none !important;
+}
+
 .modal {
   width: min(520px, 100%);
   border: 1px solid rgb(255 255 255 / 12%);
