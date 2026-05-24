@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>灵感画布</title>
     <link rel="icon" href="./assets/favicon.ico" />
-    <link rel="stylesheet" href="./styles.css?v=ungroup-20260521-1" />
+    <link rel="stylesheet" href="./styles.css?v=ai-image-20260524-1" />
   </head>
   <body>
     <main class="app">
@@ -161,25 +161,46 @@
           <input id="aiApiKey" type="password" placeholder="sk-..." autocomplete="off" />
         </label>
         <label class="field">
-          <span>模型</span>
+          <span>文字模型</span>
           <input id="aiModel" type="text" placeholder="gpt-4.1-mini" />
         </label>
         <label class="field">
-          <span>接口地址</span>
+          <span>文字接口地址</span>
           <input id="aiEndpoint" type="url" placeholder="https://api.openai.com/v1/responses" />
         </label>
         <label class="field">
-          <span>生成指令</span>
-          <textarea id="aiPrompt" rows="4" placeholder="根据选中的节点内容，整理成更清晰的执行建议。"></textarea>
+          <span>你要 AI 做什么</span>
+          <textarea id="aiPrompt" rows="4" placeholder="例如：把选中的内容整理成执行清单；或：把选中的图片改成商业科技海报风格。"></textarea>
+        </label>
+        <div class="field-grid">
+          <label class="field">
+            <span>图片模型</span>
+            <input id="aiImageModel" type="text" placeholder="gpt-image-1" />
+          </label>
+          <label class="field">
+            <span>图片数量</span>
+            <select id="aiImageCount">
+              <option value="1">1 张</option>
+              <option value="2">2 张</option>
+              <option value="3">3 张</option>
+              <option value="4">4 张</option>
+            </select>
+          </label>
+        </div>
+        <label class="field">
+          <span>图片接口地址</span>
+          <input id="aiImageEndpoint" type="url" placeholder="https://api.openai.com/v1/images/generations" />
         </label>
         <p class="modal-note">这是可选增强功能。不填写也可以正常使用画布；API Key 只保存在当前浏览器本地。</p>
         <div class="modal-actions">
           <button id="skipAiSettings" class="topbar-button muted" type="button">暂不使用</button>
           <button id="saveAiSettings" class="topbar-button" type="button">保存设置</button>
           <button id="testAiSettings" class="topbar-button" type="button">测试接口</button>
+          <button id="aiTextGenerate" class="topbar-button" type="button">生成文字</button>
+          <button id="aiImageGenerate" class="topbar-button" type="button">生成/改图</button>
         </div>
       </section>
     </div>
-    <script src="./app.js?v=api-optional-20260524-2"></script>
+    <script src="./app.js?v=ai-image-20260524-1"></script>
   </body>
 </html>

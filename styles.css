@@ -980,7 +980,8 @@ body.space-pan .node.video video {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   border: 1px solid #343b46;
   border-radius: 8px;
@@ -992,8 +993,15 @@ body.space-pan .node.video video {
 }
 
 .field input:focus,
-.field textarea:focus {
+.field textarea:focus,
+.field select:focus {
   border-color: rgb(71 199 165 / 60%);
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 12px;
 }
 
 .modal-note {
@@ -1005,9 +1013,16 @@ body.space-pan .node.video video {
 
 .modal-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 16px;
+}
+
+@media (max-width: 680px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .color-swatch {

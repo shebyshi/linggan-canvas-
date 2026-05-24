@@ -26,10 +26,15 @@ const closeAiModalButton = document.getElementById("closeAiModal");
 const skipAiSettingsButton = document.getElementById("skipAiSettings");
 const saveAiSettingsButton = document.getElementById("saveAiSettings");
 const testAiSettingsButton = document.getElementById("testAiSettings");
+const aiTextGenerateButton = document.getElementById("aiTextGenerate");
+const aiImageGenerateButton = document.getElementById("aiImageGenerate");
 const aiApiKeyInput = document.getElementById("aiApiKey");
 const aiModelInput = document.getElementById("aiModel");
 const aiEndpointInput = document.getElementById("aiEndpoint");
 const aiPromptInput = document.getElementById("aiPrompt");
+const aiImageModelInput = document.getElementById("aiImageModel");
+const aiImageEndpointInput = document.getElementById("aiImageEndpoint");
+const aiImageCountInput = document.getElementById("aiImageCount");
 
 const text = {
   chooseMode: "\u9009\u62e9\u6a21\u5f0f",
@@ -422,6 +427,9 @@ function loadAiSettings() {
     return {
       endpoint: "https://api.openai.com/v1/responses",
       model: "gpt-4.1-mini",
+      imageEndpoint: "https://api.openai.com/v1/images/generations",
+      imageModel: "gpt-image-1",
+      imageCount: "1",
       prompt: "根据选中的节点内容，整理成更清晰的执行建议。",
       apiKey: "",
       ...JSON.parse(localStorage.getItem(AI_SETTINGS_KEY) || "{}"),
@@ -430,6 +438,9 @@ function loadAiSettings() {
     return {
       endpoint: "https://api.openai.com/v1/responses",
       model: "gpt-4.1-mini",
+      imageEndpoint: "https://api.openai.com/v1/images/generations",
+      imageModel: "gpt-image-1",
+      imageCount: "1",
       prompt: "根据选中的节点内容，整理成更清晰的执行建议。",
       apiKey: "",
     };
@@ -441,6 +452,10 @@ function saveAiSettings() {
     apiKey: aiApiKeyInput.value.trim(),
     model: aiModelInput.value.trim() || "gpt-4.1-mini",
     endpoint: aiEndpointInput.value.trim() || "https://api.openai.com/v1/responses",
+    imageModel: aiImageModelInput.value.trim() || "gpt-image-1",
+    imageEndpoint:
+      aiImageEndpointInput.value.trim() || "https://api.openai.com/v1/images/generations",
+    imageCount: aiImageCountInput.value || "1",
     prompt: aiPromptInput.value.trim() || "根据选中的节点内容，整理成更清晰的执行建议。",
   };
   localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings));
@@ -453,6 +468,10 @@ function fillAiSettingsForm() {
   aiModelInput.value = settings.model || "";
   aiEndpointInput.value = settings.endpoint || "";
   aiPromptInput.value = settings.prompt || "";
+  aiImageModelInput.value = settings.imageModel || "gpt-image-1";
+  aiImageEndpointInput.value =
+    settings.imageEndpoint || "https://api.openai.com/v1/images/generations";
+  aiImageCountInput.value = settings.imageCount || "1";
 }
 
 function openAiModal() {
@@ -469,6 +488,13 @@ function getSelectedNodesForAi() {
   return ids
     .map((id) => state.nodes.find((node) => node.id === id))
     .filter((node) => node && node.type !== "image" && node.type !== "video");
+}
+
+function getSelectedImageNodesForAi() {
+  const ids = selectedIds.size ? [...selectedIds] : selectedId ? [selectedId] : [];
+  return ids
+    .map((id) => state.nodes.find((node) => node.id === id))
+    .filter((node) => node?.type === "image" && node.src);
 }
 
 function buildAiInput(settings, selectedNodes) {
@@ -511,8 +537,81 @@ async function callAi(settings, input) {
   return readResponseText(data) || "接口返回成功，但没有读取到文本内容。";
 }
 
+function dataUrlToBlob(dataUrl) {
+  const [meta, base64] = String(dataUrl || "").split(",");
+  const mime = meta.match(/data:(.*?);base64/)?.[1] || "image/png";
+  const binary = atob(base64 || "");
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mime });
+}
+
+async function imageSrcToBlob(src) {
+  if (String(src).startsWith("data:")) return dataUrlToBlob(src);
+  const response = await fetch(src);
+  if (!response.ok) throw new Error("读取选中图片失败，无法提交改图。");
+  return response.blob();
+}
+
+function getImageSizeFromSrc(src) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(fitMediaSize(image.naturalWidth, image.naturalHeight));
+    image.onerror = () => resolve(fitMediaSize());
+    image.src = src;
+  });
+}
+
+function extractImageSources(data) {
+  return (data.data || [])
+    .map((item) => item.b64_json || item.url || "")
+    .filter(Boolean)
+    .map((value) => (value.startsWith("http") || value.startsWith("data:") ? value : `data:image/png;base64,${value}`));
+}
+
+async function callAiImages(settings, prompt, sourceImages) {
+  const imageCount = Math.max(1, Math.min(4, Number(settings.imageCount) || 1));
+  const hasSourceImages = sourceImages.length > 0;
+  const endpoint = hasSourceImages
+    ? settings.imageEndpoint.replace(/\/images\/generations$/, "/images/edits")
+    : settings.imageEndpoint;
+
+  const form = new FormData();
+  form.append("model", settings.imageModel || "gpt-image-1");
+  form.append("prompt", prompt);
+  form.append("n", String(imageCount));
+  form.append("size", "1024x1024");
+
+  if (hasSourceImages) {
+    const images = sourceImages.slice(0, 16);
+    for (let index = 0; index < images.length; index += 1) {
+      const node = images[index];
+      const filename = `${node.title || `image-${index + 1}`}`.replace(/[\\/:*?"<>|]/g, "-");
+      form.append("image", await imageSrcToBlob(node.src), `${filename}.png`);
+    }
+  }
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${settings.apiKey}`,
+    },
+    body: form,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data.error?.message || `图片接口请求失败：${response.status}`;
+    throw new Error(message);
+  }
+  const sources = extractImageSources(data);
+  if (!sources.length) throw new Error("图片接口返回成功，但没有读取到图片。");
+  return sources;
+}
+
 async function generateWithAi() {
-  const settings = loadAiSettings();
+  const settings = saveAiSettings();
   if (!settings.apiKey) {
     openAiModal();
     window.alert("AI 接口是可选功能。不填写 API Key 也可以继续使用画布；需要 AI 生成时再填写即可。");
@@ -535,6 +634,45 @@ async function generateWithAi() {
     modeText.textContent = text.chooseMode;
   } finally {
     aiGenerateButton.disabled = false;
+  }
+}
+
+async function generateImagesWithAi() {
+  const settings = saveAiSettings();
+  if (!settings.apiKey) {
+    window.alert("AI 图片功能是可选的；需要生成或改图时，请先填写 API Key。");
+    return;
+  }
+  const prompt = settings.prompt.trim();
+  if (!prompt) {
+    window.alert("请先写清楚你要 AI 生成或修改什么。");
+    return;
+  }
+
+  const sourceImages = getSelectedImageNodesForAi();
+  const center = screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
+  aiImageGenerateButton.disabled = true;
+  modeText.textContent = sourceImages.length ? "AI 改图中..." : "AI 生图中...";
+  try {
+    const sources = await callAiImages(settings, prompt, sourceImages);
+    for (let index = 0; index < sources.length; index += 1) {
+      const src = sources[index];
+      const size = await getImageSizeFromSrc(src);
+      createNodeAt("image", { x: center.x + index * 42, y: center.y + index * 42 }, {
+        color: "slate",
+        title: sourceImages.length ? `AI 改图 ${index + 1}` : `AI 生图 ${index + 1}`,
+        text: prompt,
+        src,
+        ...size,
+      });
+    }
+    closeAiModal();
+    modeText.textContent = text.chooseMode;
+  } catch (error) {
+    window.alert(error.message || "AI 图片接口调用失败。");
+    modeText.textContent = text.chooseMode;
+  } finally {
+    aiImageGenerateButton.disabled = false;
   }
 }
 
@@ -1395,10 +1533,12 @@ testAiSettingsButton.addEventListener("click", async () => {
   } catch (error) {
     window.alert(error.message || "接口测试失败。");
   } finally {
-    testAiSettingsButton.disabled = false;
+  testAiSettingsButton.disabled = false;
   }
 });
-aiGenerateButton.addEventListener("click", generateWithAi);
+aiTextGenerateButton.addEventListener("click", generateWithAi);
+aiImageGenerateButton.addEventListener("click", generateImagesWithAi);
+aiGenerateButton.addEventListener("click", openAiModal);
 if (undoActionButton) {
   undoActionButton.addEventListener("click", () => {
     resetMode();
