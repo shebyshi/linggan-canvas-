@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>灵感画布</title>
     <link rel="icon" href="./assets/favicon.ico" />
-    <link rel="stylesheet" href="./styles.css?v=ai-image-20260524-1" />
+    <link rel="stylesheet" href="./styles.css?v=prompt-drawer-20260524-1" />
   </head>
   <body>
     <main class="app">
@@ -150,6 +150,48 @@
     </main>
 
     <div id="contextMenu" class="context-menu" hidden></div>
+    <button id="promptDrawerToggle" class="prompt-drawer-toggle" type="button">
+      <span aria-hidden="true">AI</span>
+      <strong>提示词</strong>
+    </button>
+    <aside id="promptDrawer" class="prompt-drawer" aria-label="AI 提示词生成" hidden>
+      <div class="drawer-header">
+        <h2>AI 提示词生成</h2>
+        <button id="closePromptDrawer" class="icon-button" type="button" aria-label="关闭">&times;</button>
+      </div>
+      <section class="drawer-section">
+        <div class="drawer-label">当前选中素材</div>
+        <div id="promptImagePreview" class="prompt-preview empty">
+          请先在画布中选择一张图片
+        </div>
+      </section>
+      <label class="field">
+        <span>你的要求</span>
+        <textarea id="promptUserInstruction" rows="5" placeholder="告诉 AI 你想把这张图转成什么方向的提示词，例如：生成即梦视频提示词、生成产品广告图提示词、生成 IP 角色三视图提示词……"></textarea>
+      </label>
+      <label class="field">
+        <span>输出类型</span>
+        <select id="promptOutputType">
+          <option value="即梦图片提示词">即梦图片提示词</option>
+          <option value="即梦视频提示词">即梦视频提示词</option>
+          <option value="Banana 提示词">Banana 提示词</option>
+          <option value="Midjourney 提示词">Midjourney 提示词</option>
+          <option value="Stable Diffusion 提示词">Stable Diffusion 提示词</option>
+          <option value="产品广告提示词">产品广告提示词</option>
+          <option value="IP 角色设定提示词">IP 角色设定提示词</option>
+        </select>
+      </label>
+      <button id="generatePromptButton" class="drawer-primary" type="button" disabled>生成提示词</button>
+      <div id="promptDrawerError" class="drawer-error" hidden></div>
+      <section class="drawer-section">
+        <div class="drawer-label">生成结果</div>
+        <textarea id="promptResult" class="prompt-result" rows="8" readonly placeholder="生成后的提示词会显示在这里。"></textarea>
+        <div class="drawer-actions">
+          <button id="copyPromptResult" class="topbar-button" type="button" disabled>复制</button>
+          <button id="addPromptCard" class="topbar-button" type="button" disabled>生成提示词卡片</button>
+        </div>
+      </section>
+    </aside>
     <div id="aiModal" class="modal-backdrop" hidden>
       <section class="modal">
         <div class="modal-header">
@@ -201,6 +243,6 @@
         </div>
       </section>
     </div>
-    <script src="./app.js?v=ai-image-20260524-1"></script>
+    <script src="./app.js?v=prompt-drawer-20260524-1"></script>
   </body>
 </html>

@@ -35,6 +35,17 @@ const aiPromptInput = document.getElementById("aiPrompt");
 const aiImageModelInput = document.getElementById("aiImageModel");
 const aiImageEndpointInput = document.getElementById("aiImageEndpoint");
 const aiImageCountInput = document.getElementById("aiImageCount");
+const promptDrawerToggle = document.getElementById("promptDrawerToggle");
+const promptDrawer = document.getElementById("promptDrawer");
+const closePromptDrawerButton = document.getElementById("closePromptDrawer");
+const promptImagePreview = document.getElementById("promptImagePreview");
+const promptUserInstruction = document.getElementById("promptUserInstruction");
+const promptOutputType = document.getElementById("promptOutputType");
+const generatePromptButton = document.getElementById("generatePromptButton");
+const promptDrawerError = document.getElementById("promptDrawerError");
+const promptResult = document.getElementById("promptResult");
+const copyPromptResultButton = document.getElementById("copyPromptResult");
+const addPromptCardButton = document.getElementById("addPromptCard");
 
 const text = {
   chooseMode: "\u9009\u62e9\u6a21\u5f0f",
@@ -248,6 +259,7 @@ function setSingleSelection(id) {
   selectedLinkId = null;
   refreshNodeClasses();
   refreshLinkClasses();
+  updatePromptDrawerSelection();
 }
 
 function setMultiSelection(ids) {
@@ -256,6 +268,7 @@ function setMultiSelection(ids) {
   selectedLinkId = null;
   refreshNodeClasses();
   refreshLinkClasses();
+  updatePromptDrawerSelection();
 }
 
 function clearSelection() {
@@ -264,6 +277,7 @@ function clearSelection() {
   selectedIds.clear();
   refreshNodeClasses();
   refreshLinkClasses();
+  updatePromptDrawerSelection();
 }
 
 function setSpacePan(isActive) {
@@ -537,6 +551,56 @@ async function callAi(settings, input) {
   return readResponseText(data) || "接口返回成功，但没有读取到文本内容。";
 }
 
+function getSelectedImageForPrompt() {
+  const id = selectedId || [...selectedIds].find((nodeId) => {
+    const node = state.nodes.find((item) => item.id === nodeId);
+    return node?.type === "image";
+  });
+  const node = state.nodes.find((item) => item.id === id);
+  return node?.type === "image" ? node : null;
+}
+
+function buildPromptRequest({ image, userInstruction, outputType }) {
+  return [
+    `你是专业 AI 绘图与视频提示词工程师。请根据画布中选中的图片素材，生成「${outputType}」。`,
+    "要求：",
+    "1. 输出可以直接复制到对应工具使用的中文提示词。",
+    "2. 包含主体、场景、风格、镜头/构图、光影、材质、色彩、细节、质量词。",
+    "3. 如果是视频提示词，请额外包含运动方式、镜头运动、节奏和时长建议。",
+    "4. 不要解释过程，只输出提示词正文。",
+    "",
+    `图片节点名称：${image.title || "未命名图片"}`,
+    `图片类型：${image.type}`,
+    `图片数据：${image.src?.startsWith("data:") ? "本地 dataURL 图片" : image.src || "未知"}`,
+    `用户要求：${userInstruction || "请根据图片生成高质量提示词。"}`,
+  ].join("\n");
+}
+
+async function generatePromptFromImage({ image, userInstruction, outputType }) {
+  const settings = loadAiSettings();
+  if (!settings.apiKey) {
+    throw new Error("请先在 AI 设置里填写 API Key。");
+  }
+
+  const textInput = buildPromptRequest({ image, userInstruction, outputType });
+  const multimodalInput = [
+    {
+      role: "user",
+      content: [
+        { type: "input_text", text: textInput },
+        { type: "input_image", image_url: image.src },
+      ],
+    },
+  ];
+
+  try {
+    return await callAi(settings, multimodalInput);
+  } catch (error) {
+    // TODO: 如果后续切换到只支持文本的自定义 API，可在这里降级为纯文本请求。
+    throw error;
+  }
+}
+
 function dataUrlToBlob(dataUrl) {
   const [meta, base64] = String(dataUrl || "").split(",");
   const mime = meta.match(/data:(.*?);base64/)?.[1] || "image/png";
@@ -673,6 +737,95 @@ async function generateImagesWithAi() {
     modeText.textContent = text.chooseMode;
   } finally {
     aiImageGenerateButton.disabled = false;
+  }
+}
+
+function setPromptDrawerOpen(isOpen) {
+  promptDrawer.hidden = !isOpen;
+  promptDrawerToggle.classList.toggle("active", isOpen);
+  if (isOpen) updatePromptDrawerSelection();
+}
+
+function setPromptDrawerError(message = "") {
+  promptDrawerError.hidden = !message;
+  promptDrawerError.textContent = message;
+}
+
+function updatePromptDrawerSelection() {
+  if (!promptImagePreview || promptDrawer.hidden) return;
+  const image = getSelectedImageForPrompt();
+  generatePromptButton.disabled = !image;
+  if (!image) {
+    promptImagePreview.className = "prompt-preview empty";
+    promptImagePreview.textContent = "请先在画布中选择一张图片";
+    return;
+  }
+
+  promptImagePreview.className = "prompt-preview";
+  promptImagePreview.innerHTML = "";
+  const thumbnail = document.createElement("img");
+  thumbnail.src = image.src;
+  thumbnail.alt = image.title || "选中图片";
+  const meta = document.createElement("div");
+  meta.className = "prompt-preview-meta";
+  meta.innerHTML = `<strong>${image.title || "未命名图片"}</strong><span>图片节点</span>`;
+  promptImagePreview.append(thumbnail, meta);
+}
+
+async function copyPromptResult() {
+  const value = promptResult.value.trim();
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    copyPromptResultButton.textContent = "已复制";
+    window.setTimeout(() => {
+      copyPromptResultButton.textContent = "复制";
+    }, 1200);
+  } catch {
+    promptResult.focus();
+    promptResult.select();
+    document.execCommand("copy");
+  }
+}
+
+function addPromptResultCard() {
+  const value = promptResult.value.trim();
+  if (!value) return;
+  const image = getSelectedImageForPrompt();
+  const size = image ? getNodeSize(image) : null;
+  const point = image
+    ? { x: image.x + size.width + 260, y: image.y + 90 }
+    : screenToWorld(window.innerWidth - 260, window.innerHeight / 2);
+  createNodeAt("note", point, {
+    color: "blue",
+    title: `AI 提示词 - ${promptOutputType.value}`,
+    text: value,
+  });
+}
+
+async function handleGeneratePrompt() {
+  const image = getSelectedImageForPrompt();
+  if (!image) {
+    setPromptDrawerError("请先在画布中选择一张图片。");
+    return;
+  }
+  const userInstruction = promptUserInstruction.value.trim();
+  const outputType = promptOutputType.value;
+  setPromptDrawerError("");
+  generatePromptButton.disabled = true;
+  generatePromptButton.textContent = "生成中...";
+  copyPromptResultButton.disabled = true;
+  addPromptCardButton.disabled = true;
+  try {
+    const result = await generatePromptFromImage({ image, userInstruction, outputType });
+    promptResult.value = result;
+    copyPromptResultButton.disabled = !result.trim();
+    addPromptCardButton.disabled = !result.trim();
+  } catch (error) {
+    setPromptDrawerError(error.message || "生成提示词失败，请稍后重试。");
+  } finally {
+    generatePromptButton.textContent = "生成提示词";
+    generatePromptButton.disabled = !getSelectedImageForPrompt();
   }
 }
 
@@ -1061,6 +1214,7 @@ function renderLinks() {
       selectedLinkId = link.id;
       refreshNodeClasses();
       refreshLinkClasses();
+      updatePromptDrawerSelection();
     });
     path.addEventListener("dblclick", (event) => {
       event.stopPropagation();
@@ -1314,6 +1468,7 @@ function renderNode(node) {
       selectedLinkId = null;
       refreshNodeClasses();
       refreshLinkClasses();
+      updatePromptDrawerSelection();
     }
 
     const isEditingTitle =
@@ -1424,6 +1579,7 @@ function render() {
     canvas.appendChild(renderNode(node));
   }
   renderLinks();
+  updatePromptDrawerSelection();
 }
 
 function load() {
@@ -1539,6 +1695,11 @@ testAiSettingsButton.addEventListener("click", async () => {
 aiTextGenerateButton.addEventListener("click", generateWithAi);
 aiImageGenerateButton.addEventListener("click", generateImagesWithAi);
 aiGenerateButton.addEventListener("click", openAiModal);
+promptDrawerToggle.addEventListener("click", () => setPromptDrawerOpen(promptDrawer.hidden));
+closePromptDrawerButton.addEventListener("click", () => setPromptDrawerOpen(false));
+generatePromptButton.addEventListener("click", handleGeneratePrompt);
+copyPromptResultButton.addEventListener("click", copyPromptResult);
+addPromptCardButton.addEventListener("click", addPromptResultCard);
 if (undoActionButton) {
   undoActionButton.addEventListener("click", () => {
     resetMode();
